@@ -23,7 +23,7 @@ req = requests.post(url, data={'params': params, 'output': 'json'})
 #unwrap the request
 date, max_temp, min_temp, precip, snow, snow_depth = req.json()['data'][0]
 day_data = {'date': date, 'actual_max_temp': max_temp, "actual_min_temp": min_temp,
-            "actual_precip": precip, "actual_snow": snow, "actual_snow_depth": snow_depth}
+            "actual_precip": precip, "actual_snow": snow, "actual_snow_depth": snow_depth, "date_added":datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 if "T" in day_data.values() or "M" in day_data.values():
     print("missing value T or M found", day_data.values())
@@ -32,4 +32,5 @@ if "T" in day_data.values() or "M" in day_data.values():
 print(day_data)
 
 #send to the DB
-requests.post(ephemera_url, json=day_data).text
+db_req = requests.post(ephemera_url, json=day_data)
+print("write to DB code:" ,db_req.status_code)
