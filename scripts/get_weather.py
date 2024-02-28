@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 ephemera_url = "http://ira.local:5000/api/weather/add" # local hosted api
 url = 'https://data.rcc-acis.org/StnData'  #national weather service API
 
-#get today's date , setting start and end date the same
 start_date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d') #'2024-1-2'
 end_date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d') #'2024-1-2'
 
