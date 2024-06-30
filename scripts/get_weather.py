@@ -1,18 +1,17 @@
 import requests
 import json
 from datetime import datetime, timedelta
+import logging
 
 # config
-ephemera_url = "http://ira.local:5000/api/weather/add"  # local hosted api
-url = 'https://data.rcc-acis.org/StnData'  # national weather service API
+CONFIG = {
+    'ephemera_url': "http://ira.local:5000/api/weather/add",  # local hosted api
+    'nws_url': 'https://data.rcc-acis.org/StnData'  # national weather service API
+}
 
-start_date = datetime.strftime(
-    datetime.now() - timedelta(1), '%Y-%m-%d')  # '2024-1-2'
-end_date = datetime.strftime(
-    datetime.now() - timedelta(1), '%Y-%m-%d')  # '2024-1-2'
-
-# prep request parameters
-ob = {
+def fetch_weather(start_date, end_date):
+    try:
+        ob = {
     'elems': [
         {
             'name': 'maxt',
@@ -85,19 +84,40 @@ ob = {
     'sDate': start_date,
     'eDate': end_date}
 
-req = requests.post(url, data={'params': json.dumps(ob), 'output': 'json'})
+        req = requests.post(CONFIG['nws_url'], data={'params': json.dumps(ob), 'output': 'json'})
 
-# unwrap the request
-date, max_temp, min_temp, precip, snow, snow_depth = req.json()['data'][0]
-day_data = {'date': date, 'actual_max_temp': max_temp, "actual_min_temp": min_temp, "actual_precip": precip,
-            "actual_snow": snow, "actual_snow_depth": snow_depth, "date_added": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        if req.status_code != 200:
+            logging.error("Failed to get weather data from NWS API")
+            return None
 
-if "T" in day_data.values() or "M" in day_data.values():
-    print("missing value T or M found", day_data.values())
+        date, max_temp, min_temp, precip, snow, snow_depth = req.json()['data'][0]
+        day_data = {
+            'date': date,
+            'actual_max_temp': max_temp,
+            "actual_min_temp": min_temp,
+            "actual_precip": precip,
+            "actual_snow": snow,
+            "actual_snow_depth": snow_depth,
+            "date_added": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-# goes to the log
-print(day_data)
+        if "T" not in day_data or "M" not in day_data:
+            logging.error("Missing required values T or M in the weather data")
+            return None
 
-# send to the DB
-db_req = requests.post(ephemera_url, json=day_data)
-print("write to DB code:", db_req.status_code)
+        req = requests.post(CONFIG['ephemera_url'], json=day_data)
+
+        if req.status_code != 200:
+            logging.error("Failed to write to database")
+            return None
+
+        logging.info(f"Successfully added weather data for {date}")
+        return day_data
+
+    except Exception as e:
+        logging.exception(str(e))
+        return None
+
+if __name__ == "__main__":
+    start_date = datetime.now() - timedelta(days=1)
+    end_date = datetime.now()
+    weather_data = fetch_weather(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
