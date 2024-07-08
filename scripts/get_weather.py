@@ -100,9 +100,9 @@ def fetch_weather(start_date, end_date):
             "actual_snow_depth": snow_depth,
             "date_added": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-        if "T" not in day_data or "M" not in day_data:
-            logging.error("Missing required values T or M in the weather data")
-            return None
+        if "T" in day_data or "M"  in day_data:
+            logging.warning("Found required values T or M in the weather data")
+
 
         req = requests.post(CONFIG['ephemera_url'], json=day_data)
 
